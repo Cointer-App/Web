@@ -1,0 +1,5 @@
+node_modules
+bun.lock
+build
+.react-router
+app/components/ui

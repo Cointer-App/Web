@@ -1,0 +1,16 @@
+[Unit]
+Description=Cointer Web frontend
+After=network.target
+
+[Service]
+Type=simple
+User=bugattiguy527
+WorkingDirectory=/opt/cointer-web
+ExecStart=/home/bugattiguy527/.bun/bin/bun run start
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3100
+
+[Install]
+WantedBy=multi-user.target

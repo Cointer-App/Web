@@ -4,7 +4,7 @@ import { ArrowDownToLineIcon, ExternalLinkIcon } from "lucide-react";
 
 import type { Route } from "./+types/activity";
 import type { clientLoader as appClientLoader } from "./_app";
-import { getActivityValue, listAddresses } from "~/lib/api";
+import { getActivityValue, getPersonal } from "~/lib/api";
 import type { PricedActivityItem } from "~/lib/api-types";
 import { chainExplorerTxUrl, chainTicker } from "~/lib/chains";
 import {
@@ -52,8 +52,8 @@ export function meta() {
 }
 
 export async function clientLoader() {
-  const [page, addresses] = await Promise.all([getActivityValue(PAGE_SIZE), listAddresses()]);
-  return { page, addresses };
+  const [page, personal] = await Promise.all([getActivityValue(PAGE_SIZE), getPersonal()]);
+  return { page, addresses: personal.addresses, limits: personal.limits };
 }
 
 export function HydrateFallback() {
@@ -70,10 +70,13 @@ function AssetTicker({ chain }: { chain: string }) {
 }
 
 export default function Activity({ loaderData }: Route.ComponentProps) {
-  const { page, addresses } = loaderData;
+  const { page, addresses, limits } = loaderData;
   const appData = useRouteLoaderData<typeof appClientLoader>("routes/_app");
   const chains = appData?.chains ?? [];
-  const retentionDays = appData?.capabilities.limits.activityRetentionDays ?? 90;
+  const retentionDays =
+    limits === undefined
+      ? (appData?.capabilities.limits.activityRetentionDays ?? 90)
+      : limits.activityRetentionDays;
 
   const [extraItems, setExtraItems] = useState<PricedActivityItem[]>([]);
   const [nextCursor, setNextCursor] = useState(page.nextCursor);
@@ -155,7 +158,7 @@ export default function Activity({ loaderData }: Route.ComponentProps) {
             {formatFiat(page.total, page.currency)}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            received, last {retentionDays} days
+            {retentionDays === null ? "received, all time" : `received, last ${retentionDays} days`}
             {page.unpricedCount > 0 && ` (${page.unpricedCount} unpriced)`}
           </p>
         </div>
@@ -173,7 +176,9 @@ export default function Activity({ loaderData }: Route.ComponentProps) {
             <EmptyDescription>
               {filtering
                 ? "Try a different chain or wallet, or load more history."
-                : `Deposits to your watched wallets show up here and stay for ${retentionDays} days.`}
+                : retentionDays === null
+                  ? "Deposits to your watched wallets show up here and stay forever."
+                  : `Deposits to your watched wallets show up here and stay for ${retentionDays} days.`}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

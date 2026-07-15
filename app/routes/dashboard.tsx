@@ -560,7 +560,14 @@ function WalletRow({
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const { personal, summary, recent } = loaderData;
   const appData = useRouteLoaderData<typeof appClientLoader>("routes/_app");
-  const maxWallets = appData?.capabilities.limits.maxAddressesPerKey ?? 10;
+  const maxWallets =
+    personal.limits === undefined
+      ? (appData?.capabilities.limits.maxAddressesPerKey ?? 10)
+      : personal.limits.maxAddresses;
+  const retentionDays =
+    personal.limits === undefined
+      ? (appData?.capabilities.limits.activityRetentionDays ?? 90)
+      : personal.limits.activityRetentionDays;
   const currency = summary.currency;
 
   const [addOpen, setAddOpen] = useState(false);
@@ -569,7 +576,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const [deleting, setDeleting] = useState<PersonalAddress | null>(null);
 
   const wallets = personal.addresses;
-  const atLimit = wallets.length >= maxWallets;
+  const atLimit = maxWallets !== null && wallets.length >= maxWallets;
   const labelFor = (chain: string, address: string) =>
     wallets.find((w) => w.chain === chain && w.address === address)?.label ?? null;
 
@@ -587,7 +594,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           </p>
           <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
             {wallets.length}
-            <span className="text-sm font-normal text-muted-foreground">/{maxWallets}</span>
+            {maxWallets !== null && (
+              <span className="text-sm font-normal text-muted-foreground">/{maxWallets}</span>
+            )}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {summary.priceAsOf !== null
@@ -698,8 +707,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           {summary.assets.length > 0 && (
             <section>
               <h2 className="mb-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                Received by asset, last {appData?.capabilities.limits.activityRetentionDays ?? 90}{" "}
-                days
+                {retentionDays === null
+                  ? "Received by asset, all time"
+                  : `Received by asset, last ${retentionDays} days`}
               </h2>
               <div className="flex flex-col gap-3 rounded-lg border p-3">
                 {summary.assets.map((asset) => {

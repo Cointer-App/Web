@@ -20,7 +20,7 @@ import {
   addChannel,
   ApiError,
   deleteChannel,
-  listChannels,
+  getPersonal,
   patchChannel,
   testChannel,
 } from "~/lib/api";
@@ -72,7 +72,8 @@ export function meta() {
 }
 
 export async function clientLoader() {
-  return { channels: await listChannels() };
+  const personal = await getPersonal();
+  return { channels: personal.channels, limits: personal.limits };
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
@@ -560,11 +561,14 @@ function ChannelRow({
 }
 
 export default function Channels({ loaderData }: Route.ComponentProps) {
-  const { channels } = loaderData;
+  const { channels, limits } = loaderData;
   const appData = useRouteLoaderData<typeof appClientLoader>("routes/_app");
   const emailAvailable = appData?.capabilities.email ?? false;
-  const maxChannels = appData?.capabilities.limits.maxChannelsPerKey ?? 10;
-  const atLimit = channels.length >= maxChannels;
+  const maxChannels =
+    limits === undefined
+      ? (appData?.capabilities.limits.maxChannelsPerKey ?? 10)
+      : limits.maxChannels;
+  const atLimit = maxChannels !== null && channels.length >= maxChannels;
 
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Channel | null>(null);
@@ -574,7 +578,8 @@ export default function Channels({ loaderData }: Route.ComponentProps) {
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-xs/relaxed text-muted-foreground">
-          Where deposit alerts go, besides mobile push. {channels.length}/{maxChannels} in use.
+          Where deposit alerts go, besides mobile push.{" "}
+          {maxChannels !== null ? `${channels.length}/${maxChannels}` : channels.length} in use.
         </p>
         {atLimit ? (
           <Tooltip>

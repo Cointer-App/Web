@@ -25,7 +25,6 @@ export interface Address {
   createdAt: number;
 }
 
-// Embedded in GET /personal, includes mute state (opt-out model).
 export interface PersonalAddress extends Address {
   notifications: {
     pushMuted: boolean;
@@ -33,7 +32,6 @@ export interface PersonalAddress extends Address {
   };
 }
 
-// url is for discord/slack, comes back redacted on reads.
 export type ChannelConfig = { topic: string; server?: string } | { url: string } | { to: string };
 
 export interface Channel {
@@ -51,8 +49,17 @@ export interface PushToken {
   createdAt: number;
 }
 
+export interface PersonalLimits {
+  maxAddresses: number | null;
+  maxChannels: number | null;
+  maxPushTokens: number | null;
+  activityRetentionDays: number | null;
+}
+
 export interface PersonalConfig {
   createdAt: number;
+  isAdmin: boolean;
+  limits: PersonalLimits;
   addresses: PersonalAddress[];
   channels: Channel[];
   pushTokens: PushToken[];

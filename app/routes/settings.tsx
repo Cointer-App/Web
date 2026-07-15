@@ -23,6 +23,7 @@ import type { PushToken } from "~/lib/api-types";
 import { downloadTextFile, formatDate } from "~/lib/format";
 import { CopyButton } from "~/components/copy-button";
 import { useTheme } from "~/components/theme-provider";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   AlertDialog,
@@ -99,7 +100,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function KeySection({ createdAt }: { createdAt: number }) {
+function KeySection({ createdAt, isAdmin }: { createdAt: number; isAdmin: boolean }) {
   const key = getKey() ?? "";
   const [revealed, setRevealed] = useState(false);
   const { copied, copy } = useCopyToClipboard();
@@ -126,7 +127,15 @@ function KeySection({ createdAt }: { createdAt: number }) {
 
   return (
     <section className="space-y-3">
-      <SectionTitle>Personal key</SectionTitle>
+      <div className="flex items-center gap-2">
+        <SectionTitle>Personal key</SectionTitle>
+        {isAdmin && <Badge variant="secondary">Admin</Badge>}
+      </div>
+      {isAdmin && (
+        <p className="text-xs text-muted-foreground">
+          Admin key: no wallet, channel, or device limits, and activity is kept forever.
+        </p>
+      )}
       <InputGroup>
         <InputGroupInput
           readOnly
@@ -519,7 +528,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <KeySection createdAt={personal.createdAt} />
+      <KeySection createdAt={personal.createdAt} isAdmin={personal.isAdmin ?? false} />
       <Separator />
       <DevicesSection pushTokens={personal.pushTokens} />
       <Separator />

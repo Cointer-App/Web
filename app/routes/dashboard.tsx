@@ -568,6 +568,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     personal.limits === undefined
       ? (appData?.capabilities.limits.activityRetentionDays ?? 90)
       : personal.limits.activityRetentionDays;
+  const isAdmin = personal.isAdmin ?? false;
   const currency = summary.currency;
 
   const [addOpen, setAddOpen] = useState(false);
@@ -586,16 +587,31 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4">
         <StatTile label="24h" window={summary.windows["24h"]} currency={currency} />
-        <StatTile label="7d" window={summary.windows["7d"]} currency={currency} />
-        <StatTile label="30d" window={summary.windows["30d"]} currency={currency} />
+        {isAdmin ? (
+          <>
+            <StatTile label="30d" window={summary.windows["30d"]} currency={currency} />
+            <StatTile label="1y" window={summary.windows["1y"]} currency={currency} />
+          </>
+        ) : (
+          <>
+            <StatTile label="7d" window={summary.windows["7d"]} currency={currency} />
+            <StatTile label="30d" window={summary.windows["30d"]} currency={currency} />
+          </>
+        )}
         <div className="bg-background p-4">
           <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            Watched wallets
+            {isAdmin ? "Received all time" : "Watched wallets"}
           </p>
           <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
-            {wallets.length}
-            {maxWallets !== null && (
-              <span className="text-sm font-normal text-muted-foreground">/{maxWallets}</span>
+            {isAdmin ? (
+              formatFiat(totalFiat, currency)
+            ) : (
+              <>
+                {wallets.length}
+                {maxWallets !== null && (
+                  <span className="text-sm font-normal text-muted-foreground">/{maxWallets}</span>
+                )}
+              </>
             )}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">

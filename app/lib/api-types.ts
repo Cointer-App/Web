@@ -106,6 +106,7 @@ export interface ActivitySummary {
     "24h": SummaryWindow;
     "7d": SummaryWindow;
     "30d": SummaryWindow;
+    "1y": SummaryWindow;
   };
   assets: {
     chain: string;

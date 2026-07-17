@@ -87,8 +87,12 @@ export const deleteAccount = () => apiFetch<{ deleted: true }>("/personal", { me
 export const listAddresses = () =>
   apiFetch<{ addresses: Address[] }>("/addresses").then((r) => r.addresses);
 
-export const addAddress = (input: { chain: string; address: string; label?: string }) =>
-  apiFetch<Address>("/addresses", { method: "POST", body: input });
+export const addAddress = (input: {
+  chain: string;
+  address: string;
+  label?: string;
+  viewKey?: string;
+}) => apiFetch<Address>("/addresses", { method: "POST", body: input });
 
 export const renameAddress = (addressId: string, label: string | null) =>
   apiFetch<Address>(`/addresses/${addressId}`, { method: "PATCH", body: { label } });

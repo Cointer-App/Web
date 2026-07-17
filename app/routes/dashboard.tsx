@@ -102,10 +102,12 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     switch (intent) {
       case "add-wallet": {
         const label = ((form.get("label") as string) ?? "").trim();
+        const viewKey = ((form.get("viewKey") as string) ?? "").trim();
         await addAddress({
           chain: form.get("chain") as string,
           address: (form.get("address") as string).trim(),
           ...(label ? { label } : {}),
+          ...(viewKey ? { viewKey } : {}),
         });
         return { ok: true as const, intent };
       }
@@ -192,13 +194,16 @@ function AddWalletDialog({
   const [chain, setChain] = useState(chains[0]?.id ?? "");
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  const [viewKey, setViewKey] = useState("");
   const [clientError, setClientError] = useState<string | null>(null);
   const busy = fetcher.state !== "idle";
+  const isMonero = chain === "monero";
 
   useEffect(() => {
     if (open) {
       setAddress("");
       setLabel("");
+      setViewKey("");
       setClientError(null);
       setChain(chains[0]?.id ?? "");
     }
@@ -218,9 +223,13 @@ function AddWalletDialog({
       setClientError(rule.addressHint);
       return;
     }
+    if (isMonero && !/^[0-9a-fA-F]{64}$/.test(viewKey.trim())) {
+      setClientError("View key must be a 64-character hex string.");
+      return;
+    }
     setClientError(null);
     fetcher.submit(
-      { intent: "add-wallet", chain, address: address.trim(), label },
+      { intent: "add-wallet", chain, address: address.trim(), label, viewKey: viewKey.trim() },
       { method: "post" },
     );
   };
@@ -270,6 +279,24 @@ function AddWalletDialog({
             />
             {error && <FieldError>{error}</FieldError>}
           </Field>
+          {isMonero && (
+            <Field>
+              <FieldLabel htmlFor="wallet-view-key">View key</FieldLabel>
+              <Input
+                id="wallet-view-key"
+                className="font-mono"
+                placeholder="Private view key (64 hex chars)"
+                autoComplete="off"
+                spellCheck={false}
+                value={viewKey}
+                onChange={(e) => setViewKey(e.target.value)}
+              />
+              <FieldDescription>
+                Your private view key, needed to detect incoming payments. Never your seed or spend
+                key.
+              </FieldDescription>
+            </Field>
+          )}
           <Field>
             <FieldLabel htmlFor="wallet-label">Label</FieldLabel>
             <Input
@@ -281,7 +308,12 @@ function AddWalletDialog({
             />
             <FieldDescription>Optional</FieldDescription>
           </Field>
-          <Button type="submit" disabled={busy || address.trim() === "" || chain === ""}>
+          <Button
+            type="submit"
+            disabled={
+              busy || address.trim() === "" || chain === "" || (isMonero && viewKey.trim() === "")
+            }
+          >
             {busy && <Spinner />}
             Add wallet
           </Button>

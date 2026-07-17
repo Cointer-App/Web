@@ -6,7 +6,7 @@ import type { Route } from "./+types/activity";
 import type { clientLoader as appClientLoader } from "./_app";
 import { getActivityValue, getPersonal } from "~/lib/api";
 import type { PricedActivityItem } from "~/lib/api-types";
-import { chainExplorerTxUrl, chainTicker } from "~/lib/chains";
+import { chainExplorerTxUrl } from "~/lib/chains";
 import {
   formatAmount,
   formatDateTime,
@@ -65,8 +65,8 @@ export function HydrateFallback() {
   );
 }
 
-function AssetTicker({ chain }: { chain: string }) {
-  return <ChainBadge chain={chain} label={chainTicker(chain)} />;
+function AssetTicker({ chain, asset }: { chain: string; asset: string }) {
+  return <ChainBadge chain={chain} label={asset} />;
 }
 
 export default function Activity({ loaderData }: Route.ComponentProps) {
@@ -207,7 +207,7 @@ export default function Activity({ loaderData }: Route.ComponentProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <AssetTicker chain={item.chain} />
+                        <AssetTicker chain={item.chain} asset={item.asset} />
                         <span className="max-w-40 truncate">
                           {labelFor(item.chain, item.address) ?? (
                             <span className="font-mono">{truncateAddress(item.address)}</span>

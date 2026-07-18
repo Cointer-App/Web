@@ -22,10 +22,17 @@ import {
   getActivityValue,
   getAddressNotifications,
   getPersonal,
+  getWalletValues,
   patchAddressNotifications,
   renameAddress,
 } from "~/lib/api";
-import type { AddressNotifications, PersonalAddress, SummaryWindow } from "~/lib/api-types";
+import type {
+  AddressNotifications,
+  PersonalAddress,
+  SummaryWindow,
+  WalletBalance,
+  WalletValues,
+} from "~/lib/api-types";
 import { CHAIN_CONFIG, chainTicker } from "~/lib/chains";
 import {
   formatAmount,
@@ -154,6 +161,33 @@ export function HydrateFallback() {
       </div>
     </div>
   );
+}
+
+const WALLET_VALUE_POLL_MS = 30_000;
+
+function useWalletValues() {
+  const [data, setData] = useState<WalletValues | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getWalletValues()
+        .then((values) => {
+          if (!cancelled) setData(values);
+        })
+        .catch(() => {
+          // Keep showing the last known values on a transient failure.
+        });
+    };
+    load();
+    const interval = setInterval(load, WALLET_VALUE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return data;
 }
 
 function StatTile({
@@ -530,13 +564,60 @@ function NotificationsDialog({
   );
 }
 
+function WalletValue({
+  balance,
+  currency,
+}: {
+  balance: WalletBalance | undefined;
+  currency: string;
+}) {
+  if (!balance) {
+    return <Skeleton className="ml-auto h-7 w-20" />;
+  }
+  const priced = balance.assets.filter((a) => a.fiatValue !== null);
+  const summary =
+    balance.assets.length === 0
+      ? "no balance"
+      : balance.assets
+          .slice(0, 2)
+          .map((a) => formatAmount(a.amount, a.asset))
+          .join(" + ") + (balance.assets.length > 2 ? "…" : "");
+
+  return (
+    <div className="text-right">
+      <p className="font-mono text-xs font-medium tabular-nums">
+        {balance.fiatValue !== null
+          ? formatFiat(balance.fiatValue, currency)
+          : priced.length === 0 && balance.assets.length > 0
+            ? "unpriced"
+            : "—"}
+        {balance.approximate && (
+          <Tooltip>
+            <TooltipTrigger
+              render={<span className="ml-1 cursor-help text-muted-foreground">*</span>}
+            />
+            <TooltipContent>
+              Monero is view-only: this is lifetime received, not a live spendable balance.
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </p>
+      <p className="text-[11px] text-muted-foreground">{summary}</p>
+    </div>
+  );
+}
+
 function WalletRow({
   wallet,
+  balance,
+  currency,
   onRename,
   onNotifications,
   onDelete,
 }: {
   wallet: PersonalAddress;
+  balance: WalletBalance | undefined;
+  currency: string;
   onRename: () => void;
   onNotifications: () => void;
   onDelete: () => void;
@@ -565,6 +646,7 @@ function WalletRow({
           <span>added {formatDate(wallet.createdAt)}</span>
         </div>
       </div>
+      <WalletValue balance={balance} currency={currency} />
       <CopyButton value={wallet.address} label="Copy address" />
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -608,6 +690,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const [editingNotifications, setEditingNotifications] = useState<PersonalAddress | null>(null);
   const [deleting, setDeleting] = useState<PersonalAddress | null>(null);
 
+  const walletValues = useWalletValues();
+  const balanceById = new Map(walletValues?.wallets.map((w) => [w.id, w]) ?? []);
+
   const wallets = personal.addresses;
   const atLimit = maxWallets !== null && wallets.length >= maxWallets;
   const labelFor = (chain: string, address: string) =>
@@ -617,6 +702,25 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      {wallets.length > 0 && (
+        <div className="rounded-lg border bg-background p-4">
+          <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            Portfolio value
+          </p>
+          {walletValues ? (
+            <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
+              {formatFiat(walletValues.total, walletValues.currency)}
+            </p>
+          ) : (
+            <Skeleton className="mt-2 h-8 w-40" />
+          )}
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {walletValues?.priceAsOf != null
+              ? `live balances, prices as of ${formatRelative(walletValues.priceAsOf)}`
+              : "fetching live balances…"}
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4">
         <StatTile label="24h" window={summary.windows["24h"]} currency={currency} />
         {isAdmin ? (
@@ -700,6 +804,8 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                 <WalletRow
                   key={wallet.id}
                   wallet={wallet}
+                  balance={balanceById.get(wallet.id)}
+                  currency={walletValues?.currency ?? currency}
                   onRename={() => setRenaming(wallet)}
                   onNotifications={() => setEditingNotifications(wallet)}
                   onDelete={() => setDeleting(wallet)}

@@ -116,3 +116,26 @@ export interface ActivitySummary {
     fiatValue: number | null;
   }[];
 }
+
+export interface WalletAssetBalance {
+  asset: string;
+  amount: string;
+  fiatValue: number | null;
+}
+
+export interface WalletBalance {
+  id: string;
+  chain: string;
+  address: string;
+  label: string | null;
+  approximate: boolean;
+  assets: WalletAssetBalance[];
+  fiatValue: number | null;
+}
+
+export interface WalletValues {
+  currency: string;
+  priceAsOf: number | null;
+  total: number;
+  wallets: WalletBalance[];
+}

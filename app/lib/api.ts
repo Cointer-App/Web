@@ -12,6 +12,7 @@ import type {
   ChannelType,
   PersonalConfig,
   PushToken,
+  WalletValues,
 } from "~/lib/api-types";
 
 export const API_URL = import.meta.env.VITE_API_URL ?? "https://api.cointer.app";
@@ -144,3 +145,5 @@ export const getActivityValue = (limit?: number, cursor?: number) =>
   apiFetch<ActivityValuePage>(`/activity/value${page(limit, cursor)}`);
 
 export const getActivitySummary = () => apiFetch<ActivitySummary>("/activity/summary");
+
+export const getWalletValues = () => apiFetch<WalletValues>("/wallets/value");
